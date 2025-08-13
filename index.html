@@ -35,7 +35,8 @@
         
         <!-- 時間表示エリア -->
         <div id="display-area" class="text-center bg-gray-100 dark:bg-gray-700 rounded-lg p-4 overflow-hidden">
-            <h1 id="timer-display" class="font-mono-custom text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight text-gray-900 dark:text-white break-all">
+            <!-- `break-all` を削除し、画面幅に応じてフォントサイズが自動で変わるように修正 -->
+            <h1 id="timer-display" class="font-mono-custom text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight text-gray-900 dark:text-white">
                 00:00:00.00
             </h1>
             <p id="timer-status" class="text-sm text-gray-500 dark:text-gray-400 mt-1 h-5"></p>
@@ -188,7 +189,7 @@
                 
                 if (isNegative) {
                     timerDisplay.textContent = `+${formattedTime}`;
-                    timerDisplay.classList.add('text-red-500'); // 色を赤に変更
+                    timerDisplay.classList.add('text-red-500');
                     timerDisplay.classList.remove('text-gray-900', 'dark:text-white');
                     if (!isCountingUp) {
                         isCountingUp = true;
@@ -268,8 +269,9 @@
                 }
 
                 isRunning = true;
-                isCountingUp = false;
-                timerStatus.textContent = "カウントダウン中";
+                // isCountingUpはタイマーが0になった時に判定するため、ここではリセットしない
+                
+                timerStatus.textContent = isCountingUp ? "カウントアップ中" : "カウントダウン中";
                 
                 if (timerInterval) clearInterval(timerInterval);
                 timerInterval = setInterval(() => {
@@ -283,7 +285,7 @@
             const handleStop = () => {
                 clearInterval(timerInterval);
                 isRunning = false;
-                pausedTime = targetTime - Date.now(); // 残り時間を保存
+                pausedTime = targetTime - Date.now();
                 timerStatus.textContent = "一時停止中";
                 updateButtons();
             };
@@ -294,7 +296,7 @@
                 isCountingUp = false;
                 initialDuration = 0;
                 targetTime = 0;
-                pausedTime = 0; // リセット
+                pausedTime = 0;
                 
                 timerDisplay.textContent = '00:00:00.00';
                 timerDisplay.classList.remove('text-red-500');
@@ -305,7 +307,7 @@
                 minutesSelect.value = 0;
                 secondsSelect.value = 0;
                 
-                alarms = []; // アラームもリセット
+                alarms = [];
                 renderAlarms();
                 updateButtons();
             };
@@ -334,7 +336,13 @@
                     return;
                 }
 
-                const formattedTime = `${alarmH.toString().padStart(2, '0')}:${alarmM.toString().padStart(2, '0')}:${alarmS.toString().padStart(2, '0')}`;
+                // タイマーの残り時間としてアラーム時間を表現する
+                const remainingSeconds = timerTotalSeconds - alarmTotalSeconds;
+                const h = Math.floor(remainingSeconds / 3600);
+                const m = Math.floor((remainingSeconds % 3600) / 60);
+                const s = remainingSeconds % 60;
+                
+                const formattedTime = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 
                 if (alarms.some(a => a.time === formattedTime)) {
                     alert('この時間は既に設定されています。');
@@ -342,7 +350,7 @@
                 }
 
                 alarms.push({ time: formattedTime, triggered: false });
-                alarms.sort((a, b) => b.time.localeCompare(a.time)); // 時間の降順にソート
+                alarms.sort((a, b) => b.time.localeCompare(a.time));
 
                 renderAlarms();
             };
