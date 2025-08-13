@@ -166,8 +166,18 @@
         let isCountingUp = false;
         let alarms = []; // { time: (ms), triggered: false }
         
-        // Tone.jsのシンセサイザーを準備
-        const synth = new Tone.Synth().toDestination();
+        // Tone.jsのシンセサイザーを準備（時報のような音に設定）
+        const synth = new Tone.Synth({
+            oscillator: {
+                type: 'sine' // 時報のような純粋な音にするためサイン波を選択
+            },
+            envelope: {
+                attack: 0.005, // 素早いアタック
+                decay: 0.1,    // ディケイ
+                sustain: 0.3,  // サステイン
+                release: 1     // 長めのリリースで余韻を残す
+            }
+        }).toDestination();
 
         // ドロップダウンに数値を設定する関数
         const populateSelect = (select, max, pad = true) => {
@@ -245,8 +255,8 @@
         const playBell = () => {
             // Tone.jsがユーザー操作によって開始される必要がある
             Tone.start().then(() => {
-                // C5の音を0.5秒間鳴らす
-                synth.triggerAttackRelease("C5", "0.5s");
+                // 時報で使われる880Hz(A5)の音を0.2秒間鳴らす
+                synth.triggerAttackRelease("880", "0.2s");
             }).catch(e => {
                 console.error("Audio context could not be started: ", e);
             });
