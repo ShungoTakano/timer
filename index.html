@@ -34,8 +34,8 @@
     <div class="w-full max-w-2xl mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 md:p-8 space-y-6">
         
         <!-- 時間表示エリア -->
-        <div id="display-area" class="text-center bg-gray-100 dark:bg-gray-700 rounded-lg p-4">
-            <h1 id="timer-display" class="font-mono-custom text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight text-gray-900 dark:text-white">
+        <div id="display-area" class="text-center bg-gray-100 dark:bg-gray-700 rounded-lg p-4 overflow-hidden">
+            <h1 id="timer-display" class="font-mono-custom text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight text-gray-900 dark:text-white break-all">
                 00:00:00.00
             </h1>
             <p id="timer-status" class="text-sm text-gray-500 dark:text-gray-400 mt-1 h-5"></p>
@@ -76,16 +76,28 @@
         <!-- アラーム設定エリア -->
         <div class="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-600">
             <h2 class="text-lg font-bold">アラーム設定</h2>
-            <div class="flex items-end gap-3">
-                <div class="flex-grow">
-                    <label for="alarm-time" class="block text-sm font-medium text-gray-700 dark:text-gray-300">通知時間 (HH:MM:SS)</label>
-                    <input type="text" id="alarm-time" placeholder="例: 00:05:00" class="mt-1 block w-full py-2 px-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+            <div class="grid grid-cols-3 gap-3 items-end">
+                <div class="col-span-3 sm:col-span-2">
+                    <div class="grid grid-cols-3 gap-3">
+                        <div>
+                            <label for="alarm-hours" class="block text-sm font-medium text-gray-700 dark:text-gray-300">時間</label>
+                            <select id="alarm-hours" class="mt-1 block w-full py-2 px-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"></select>
+                        </div>
+                        <div>
+                            <label for="alarm-minutes" class="block text-sm font-medium text-gray-700 dark:text-gray-300">分</label>
+                            <select id="alarm-minutes" class="mt-1 block w-full py-2 px-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"></select>
+                        </div>
+                        <div>
+                            <label for="alarm-seconds" class="block text-sm font-medium text-gray-700 dark:text-gray-300">秒</label>
+                            <select id="alarm-seconds" class="mt-1 block w-full py-2 px-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"></select>
+                        </div>
+                    </div>
                 </div>
-                <button id="add-alarm-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 btn-active-scale">
+                <button id="add-alarm-btn" class="col-span-3 sm:col-span-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 btn-active-scale mt-1 sm:mt-0">
                     追加
                 </button>
             </div>
-            <div id="alarm-list" class="space-y-2">
+            <div id="alarm-list" class="space-y-2 pt-2">
                 <!-- アラームリストがここに追加されます -->
             </div>
         </div>
@@ -103,66 +115,65 @@
             const startBtn = document.getElementById('start-btn');
             const stopBtn = document.getElementById('stop-btn');
             const resetBtn = document.getElementById('reset-btn');
-            const settingsArea = document.getElementById('settings-area');
             
-            const alarmTimeInput = document.getElementById('alarm-time');
+            const alarmHoursSelect = document.getElementById('alarm-hours');
+            const alarmMinutesSelect = document.getElementById('alarm-minutes');
+            const alarmSecondsSelect = document.getElementById('alarm-seconds');
             const addAlarmBtn = document.getElementById('add-alarm-btn');
             const alarmList = document.getElementById('alarm-list');
 
             // --- 状態管理変数 ---
-            let timerInterval = null; // setIntervalのIDを保持
-            let targetTime = 0; // タイマーの目標時刻 (ミリ秒)
-            let initialDuration = 0; // 最初に設定された時間 (ミリ秒)
-            let isRunning = false; // タイマーが動作中か
-            let isCountingUp = false; // カウントアップ中か
-            let alarms = []; // アラーム設定を保持する配列 { time: "HH:MM:SS", triggered: false }
+            let timerInterval = null;
+            let targetTime = 0;
+            let initialDuration = 0;
+            let pausedTime = 0; // 一時停止時の残り時間
+            let isRunning = false;
+            let isCountingUp = false;
+            let alarms = []; // { time: "HH:MM:SS", triggered: false }
 
             // --- 音声関連 ---
-            let synth; // Tone.jsのシンセサイザー
-            let soundInitialized = false; // 音声が初期化されたか
+            let synth;
+            let soundInitialized = false;
 
             // --- 初期化処理 ---
-
-            // 時間・分・秒のプルダウンメニューを生成
             const populateSelects = () => {
-                // 時間 (0-11)
-                for (let i = 0; i <= 12; i++) {
+                for (let i = 0; i < 12; i++) {
                     const option = document.createElement('option');
                     option.value = i;
                     option.textContent = i.toString().padStart(2, '0');
-                    hoursSelect.appendChild(option);
+                    hoursSelect.appendChild(option.cloneNode(true));
+                    alarmHoursSelect.appendChild(option);
                 }
-                // 分・秒 (0-59)
                 for (let i = 0; i < 60; i++) {
                     const optionMin = document.createElement('option');
                     optionMin.value = i;
                     optionMin.textContent = i.toString().padStart(2, '0');
                     minutesSelect.appendChild(optionMin.cloneNode(true));
-                    secondsSelect.appendChild(optionMin);
+                    secondsSelect.appendChild(optionMin.cloneNode(true));
+                    alarmMinutesSelect.appendChild(optionMin.cloneNode(true));
+                    alarmSecondsSelect.appendChild(optionMin);
                 }
             };
             
             populateSelects();
 
             // --- UI更新関数 ---
-
-            // ボタンの状態を更新する関数
             const updateButtons = () => {
                 startBtn.disabled = isRunning;
                 stopBtn.disabled = !isRunning;
                 resetBtn.disabled = (initialDuration === 0 && !isRunning);
                 
-                // タイマー動作中は設定を変更できないようにする
-                hoursSelect.disabled = isRunning;
-                minutesSelect.disabled = isRunning;
-                secondsSelect.disabled = isRunning;
-                addAlarmBtn.disabled = isRunning;
-                alarmTimeInput.disabled = isRunning;
-                // 動作中はアラームの削除ボタンも無効化
-                document.querySelectorAll('.remove-alarm-btn').forEach(btn => btn.disabled = isRunning);
+                const disableSettings = isRunning || pausedTime > 0;
+                hoursSelect.disabled = disableSettings;
+                minutesSelect.disabled = disableSettings;
+                secondsSelect.disabled = disableSettings;
+                addAlarmBtn.disabled = disableSettings;
+                alarmHoursSelect.disabled = disableSettings;
+                alarmMinutesSelect.disabled = disableSettings;
+                alarmSecondsSelect.disabled = disableSettings;
+                document.querySelectorAll('.remove-alarm-btn').forEach(btn => btn.disabled = disableSettings);
             };
 
-            // 時間表示を更新する関数
             const updateDisplay = (ms) => {
                 const isNegative = ms < 0;
                 const absMs = Math.abs(ms);
@@ -176,26 +187,25 @@
                 const formattedTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${centiseconds.toString().padStart(2, '0')}`;
                 
                 if (isNegative) {
-                    timerDisplay.textContent = `-${formattedTime}`;
-                    timerDisplay.classList.add('text-red-500');
+                    timerDisplay.textContent = `+${formattedTime}`;
+                    timerDisplay.classList.add('text-red-500'); // 色を赤に変更
+                    timerDisplay.classList.remove('text-gray-900', 'dark:text-white');
                     if (!isCountingUp) {
                         isCountingUp = true;
                         timerStatus.textContent = "カウントアップ中";
-                        // カウントアップ開始時に一度だけベルを鳴らす
                         ringBell('C5');
                     }
                 } else {
                     timerDisplay.textContent = formattedTime;
                     timerDisplay.classList.remove('text-red-500');
+                    timerDisplay.classList.add('text-gray-900', 'dark:text-white');
                 }
                 
-                // アラームのチェック
                 if (isRunning) {
                     checkAlarms(formattedTime, isNegative);
                 }
             };
 
-            // アラームリストの表示を更新
             const renderAlarms = () => {
                 alarmList.innerHTML = '';
                 if (alarms.length === 0) {
@@ -211,7 +221,6 @@
                     `;
                     alarmList.appendChild(alarmEl);
                 });
-                // 削除ボタンにイベントリスナーを再設定
                 document.querySelectorAll('.remove-alarm-btn').forEach(btn => {
                     btn.addEventListener('click', handleRemoveAlarm);
                 });
@@ -238,89 +247,94 @@
             };
             
             // --- イベントハンドラ ---
-
-            // スタートボタンの処理
             const handleStart = async () => {
-                // 音声コンテキストをユーザー操作（クリック）によって初期化
                 await initializeSound();
+                
+                if (pausedTime > 0) { // 一時停止からの再開
+                    targetTime = Date.now() + pausedTime;
+                    pausedTime = 0;
+                } else { // 新規スタート
+                    const h = parseInt(hoursSelect.value, 10);
+                    const m = parseInt(minutesSelect.value, 10);
+                    const s = parseInt(secondsSelect.value, 10);
+                    initialDuration = (h * 3600 + m * 60 + s) * 1000;
 
-                const h = parseInt(hoursSelect.value, 10);
-                const m = parseInt(minutesSelect.value, 10);
-                const s = parseInt(secondsSelect.value, 10);
-
-                initialDuration = (h * 3600 + m * 60 + s) * 1000;
-
-                if (initialDuration <= 0) {
-                    alert('タイマー時間を設定してください。');
-                    return;
+                    if (initialDuration <= 0) {
+                        alert('タイマー時間を設定してください。');
+                        return;
+                    }
+                    targetTime = Date.now() + initialDuration;
+                    alarms.forEach(a => a.triggered = false);
                 }
 
-                targetTime = Date.now() + initialDuration;
                 isRunning = true;
                 isCountingUp = false;
-                
-                // アラームのトリガー状態をリセット
-                alarms.forEach(a => a.triggered = false);
-
                 timerStatus.textContent = "カウントダウン中";
                 
                 if (timerInterval) clearInterval(timerInterval);
                 timerInterval = setInterval(() => {
                     const remainingTime = targetTime - Date.now();
                     updateDisplay(remainingTime);
-                }, 10); // 10ミリ秒ごとに更新して .00 を表示
+                }, 10);
 
                 updateButtons();
             };
 
-            // ストップボタンの処理
             const handleStop = () => {
                 clearInterval(timerInterval);
                 isRunning = false;
+                pausedTime = targetTime - Date.now(); // 残り時間を保存
                 timerStatus.textContent = "一時停止中";
                 updateButtons();
             };
 
-            // リセットボタンの処理
             const handleReset = () => {
                 clearInterval(timerInterval);
                 isRunning = false;
                 isCountingUp = false;
                 initialDuration = 0;
                 targetTime = 0;
+                pausedTime = 0; // リセット
                 
                 timerDisplay.textContent = '00:00:00.00';
-                timerDisplay.classList.remove('text-green-500');
+                timerDisplay.classList.remove('text-red-500');
+                timerDisplay.classList.add('text-gray-900', 'dark:text-white');
                 timerStatus.textContent = "";
                 
-                // プルダウンを0にリセット
                 hoursSelect.value = 0;
                 minutesSelect.value = 0;
                 secondsSelect.value = 0;
                 
-                // アラームのトリガー状態をリセット
-                alarms.forEach(a => a.triggered = false);
-
+                alarms = []; // アラームもリセット
+                renderAlarms();
                 updateButtons();
             };
             
-            // アラーム追加の処理
             const handleAddAlarm = () => {
-                const timePattern = /^\d{1,2}:\d{2}:\d{2}$/;
-                const timeStr = alarmTimeInput.value.trim();
+                const timerH = parseInt(hoursSelect.value, 10);
+                const timerM = parseInt(minutesSelect.value, 10);
+                const timerS = parseInt(secondsSelect.value, 10);
+                const timerTotalSeconds = timerH * 3600 + timerM * 60 + timerS;
 
-                if (!timePattern.test(timeStr)) {
-                    alert('アラームの時間は HH:MM:SS 形式で入力してください。\n例: 00:05:00');
+                const alarmH = parseInt(alarmHoursSelect.value, 10);
+                const alarmM = parseInt(alarmMinutesSelect.value, 10);
+                const alarmS = parseInt(alarmSecondsSelect.value, 10);
+                const alarmTotalSeconds = alarmH * 3600 + alarmM * 60 + alarmS;
+
+                if (timerTotalSeconds === 0) {
+                    alert('先にタイマー時間を設定してください。');
                     return;
                 }
-                
-                const parts = timeStr.split(':').map(Number);
-                if (parts[1] >= 60 || parts[2] >= 60) {
-                    alert('分と秒は0から59の間で入力してください。');
+                if (alarmTotalSeconds === 0) {
+                    alert('アラーム時間を設定してください。');
                     return;
                 }
-                
-                const formattedTime = parts.map(p => p.toString().padStart(2, '0')).join(':');
+                if (alarmTotalSeconds > timerTotalSeconds) {
+                    alert('アラーム時間はタイマーの設定時間より短くしてください。');
+                    return;
+                }
+
+                const formattedTime = `${alarmH.toString().padStart(2, '0')}:${alarmM.toString().padStart(2, '0')}:${alarmS.toString().padStart(2, '0')}`;
 
                 if (alarms.some(a => a.time === formattedTime)) {
                     alert('この時間は既に設定されています。');
@@ -328,33 +342,26 @@
                 }
 
                 alarms.push({ time: formattedTime, triggered: false });
-                alarms.sort((a, b) => a.time.localeCompare(b.time)); // 時間順にソート
+                alarms.sort((a, b) => b.time.localeCompare(a.time)); // 時間の降順にソート
 
                 renderAlarms();
-                alarmTimeInput.value = '';
             };
             
-            // アラーム削除の処理
             const handleRemoveAlarm = (event) => {
                 const index = parseInt(event.target.dataset.index, 10);
                 alarms.splice(index, 1);
                 renderAlarms();
             };
             
-            // アラームをチェックする関数
             const checkAlarms = (currentTime, isNegative) => {
-                // currentTime は HH:MM:SS.ms 形式なので、秒までを切り出す
                 const checkTime = currentTime.substring(0, 8);
-                
-                // カウントアップ中はアラームを鳴らさない仕様
                 if (isNegative) return;
 
                 alarms.forEach(alarm => {
                     if (!alarm.triggered && alarm.time === checkTime) {
                         ringBell('A5', '4n');
-                        alarm.triggered = true; // 一度鳴ったら再度鳴らないようにする
+                        alarm.triggered = true;
                         
-                        // 画面上で通知
                         const alarmEl = Array.from(alarmList.children).find(el => el.querySelector('span')?.textContent === alarm.time);
                         if (alarmEl) {
                             alarmEl.classList.add('bg-yellow-300', 'dark:bg-yellow-600');
@@ -371,13 +378,6 @@
             stopBtn.addEventListener('click', handleStop);
             resetBtn.addEventListener('click', handleReset);
             addAlarmBtn.addEventListener('click', handleAddAlarm);
-            
-            // Enterキーでアラームを追加
-            alarmTimeInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    handleAddAlarm();
-                }
-            });
 
             // --- 初期表示 ---
             updateButtons();
